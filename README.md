@@ -388,8 +388,8 @@ profile\Lxbox\
 ├─ main.js  crypto.js  tagwriter.js  lx.js  providers.js    ← 不用动
 ├─ lxbox-logo.png  tools\lx_tag.ps1
 └─ resources\
-    ├─ 五合一音源.js
-    └─ 墨澜音乐源v2.3.4.js
+    ├─ 音源脚本1.js
+    └─ 音源脚本2.js
 ```
 
 查找顺序（找到第一个含 `.js` 的目录就用它）：
