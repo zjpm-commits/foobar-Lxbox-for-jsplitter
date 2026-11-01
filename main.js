@@ -1,5 +1,5 @@
 ﻿/* ==========================================================================
-   洛雪音源 · JSplitter 面板  v2.1.0
+   洛雪音源 · JSplitter 面板  v2.1.1
      - 排行榜：QQ / 网易 / 酷我 / 酷狗 / 咪咕（与上排标签严格同列对齐）
      - 搜索：当前平台单曲搜索（面板内直接打字，on_char + 按键兜底 + Ctrl+V）
      - 不输关键词时，搜索框下面直接显示「热门推荐」曲目（网易云热歌榜）
@@ -56,6 +56,11 @@
      - 下载本身失败、且链接带 vkey 时如实报错，不再把 403 链接原样丢给 foobar2000 弹窗
      - **取链失败但有本地缓存时直接播缓存**：平台挂了 / 断网，已经下好的歌照样能听
 
+   v2.1.1：
+     - 新增快捷键 F4 打开「艺人介绍」浮层（再按一次关掉）；顶栏第一行的人物按钮同效，
+       浮层开着也能直接点它切换（以前这一下只会把浮层关掉）
+     - 浮层开着时 F3 / F4 都认：评论 ↔ 艺人介绍可以直接切
+
    v2.1.0：
      - **mp3 / flac 缓存分目录**：设置 → 音源与属性 里各自可改，默认
        <profile>\Lxbox\mp3 与 <profile>\Lxbox\flac（属性 lx.cacheDirMp3 / lx.cacheDirFlac）
@@ -67,7 +72,7 @@
    索引 / 评论 / 艺人资料 / 封面仍在 <profile>\Lxbox\cache（lx.cacheDir 可改）。
    配色跟随 foobar2000 的浅色/深色设置；背景使用正在播放曲目的专辑封面（模糊+半透明）。
    ========================================================================== */
-var APP_VERSION = '2.1.0';       /* 顶栏左下角显示的就是它，与 DefineScript 保持一致 */
+var APP_VERSION = '2.1.1';       /* 顶栏左下角显示的就是它，与 DefineScript 保持一致 */
 window.DefineScript('洛雪音源', { author: 'OpenCode', version: APP_VERSION });
 
 /* --------------------------------------------------------------------------
@@ -5254,6 +5259,8 @@ function targetTrack() {
 
 function openOverlay(kind, name, subject) {
   if (editKind) endEdit();
+  /* 音质检测跑到一半就切到别的浮层：这一轮作废，别让结果写进别的浮层 */
+  if (overlay === 'probe' && kind !== 'probe' && probeBusy) probeCancel();
   overlay = kind;
   overlayName = name || '';
   overlaySubject = subject || '';
@@ -5986,11 +5993,20 @@ function ensureBioRemote(name, picFile, songsFile) {
   });
 }
 
+/* F4 / 顶栏人物按钮：艺人介绍浮层开关。
+   再按一次关掉（和点按钮、点 × 一致），否则按当前曲目的歌手开一次。 */
+function toggleBio() {
+  if (overlay === 'bio') { closeOverlay(); return; }
+  /* 正在搜索框里打字：先把关键词提交掉，别因为开个浮层把输了一半的字丢掉 */
+  if (editKind) commitEdit();
+  showBio();
+}
+
 function showBio() {
   var track = targetTrack();
   var name = String((track && track.artist) || '').trim();
   if (!name) {
-    setStatus('不知道歌手是谁，先播一首再点「艺人」', true);
+    setStatus('不知道歌手是谁，先播一首再按 F4（或点顶栏人物按钮）看艺人介绍', true);
     return;
   }
   openOverlay('bio', '艺人介绍', name + ' · 网易云');
@@ -9464,7 +9480,16 @@ function on_mouse_lbtn_up(x, y) {
 
   /* 浮层优先：关闭 / 点外面 / 艺人介绍里的歌单与「更多…」 */
   if (overlay) {
-    /* 顶栏那两格不跟着「点外面就关」走：浮层开着也能直接换脚本 / 换音质 */
+    /* 顶栏那几格不跟着「点外面就关」走：浮层开着也能直接换脚本 / 换音质，
+       人物 / 气泡两个图标按钮直接切浮层（人物 = 开 / 关艺人介绍）。 */
+    for (var ob = 0; ob < HEAD_BTNS.length; ob++) {
+      var obtn = HEAD_BTNS[ob];
+      if (obtn.key === 'settings') continue;
+      if (!headerButtonVisible(obtn.key) || !inRect(headerButtonRect(obtn.key), x, y)) continue;
+      if (obtn.key === 'bio') toggleBio();
+      else if (obtn.key === 'comments') showComments();
+      return;
+    }
     if (scriptBarHot(x, y)) {
       var sbr0 = scriptBarRect();
       openScriptMenu(sbr0.x, sbr0.y + sbr0.h);
@@ -9553,7 +9578,7 @@ function on_mouse_lbtn_up(x, y) {
     if (!headerButtonVisible(btn.key) || !inRect(headerButtonRect(btn.key), x, y)) continue;
     if (btn.key === 'settings') openSettings();
     else if (btn.key === 'comments') showComments();
-    else if (btn.key === 'bio') showBio();
+    else if (btn.key === 'bio') toggleBio();
     return;
   }
 
@@ -9745,6 +9770,9 @@ function on_key_down(vkey) {
     return;
   }
   if (overlay) {
+    /* F3 / F4：浮层开着也认 —— 正在看评论 / 日志时一按就切到艺人介绍，反之亦然 */
+    if (vkey === 0x72) { if (overlay !== 'comments') showComments(); return; }
+    if (vkey === 0x73) { toggleBio(); return; }
     if (vkey === 0x26) { overlayScroll -= 1; clampScroll(); repaint(); }
     else if (vkey === 0x28) { overlayScroll += 1; clampScroll(); repaint(); }
     else if (vkey === 0x21) { overlayScroll -= visOverlayLines(); clampScroll(); repaint(); }
@@ -9772,6 +9800,10 @@ function on_key_down(vkey) {
   }
   if (vkey === 0x72) {          // F3：评论
     showComments();
+    return;
+  }
+  if (vkey === 0x73) {          // F4：艺人介绍（再按一次关掉）
+    toggleBio();
     return;
   }
   if (vkey === 0x74) {          // F5
