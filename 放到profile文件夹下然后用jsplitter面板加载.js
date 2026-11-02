@@ -1,1 +1,1 @@
-include(fb.ProfilePath + 'Lxbox\\main.js');
+include(fb.ProfilePath + 'themes\\Lxbox\\main.js');
