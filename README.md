@@ -6,6 +6,7 @@
 支持平台：**QQ 音乐 / 网易云 / 酷我 / 酷狗 / 咪咕**。
 断网也能重播，标签、封面、歌词全在文件里，播放列表里看到的就是整理好的曲目信息。
 
+<img width="824" height="580" alt="PixPin_2026-11-05_15-32-22" src="https://github.com/user-attachments/assets/3c1455a9-b9f4-4cde-8c66-2f9c2b217512" />
 
 ## 目录
 
