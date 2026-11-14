@@ -8657,6 +8657,28 @@ function buildDiagnosticLines(out, width) {
     out.push({ t: '  × ' + r.name + '：' + (r.error || r.status || '未初始化'), c: 'err' });
   });
   if (st.error) out.push({ t: '加载错误：' + st.error, c: 'err' });
+
+  /* QQ 加密格式单独一条：撞上几次、最近一次是哪来的。日志里只会写「取链失败」，
+     看不出是哪一档、哪个脚本给的，这条能。 */
+  var hits = (NM.lx && NM.lx.encHits) || [];
+  if (!hits.length) {
+    wrapInto(out, 'QQ 加密格式：没遇到过（.mflac / .mgg / .qmc* 取链层一律不收）',
+             width, FONT_BASE, 'dim');
+  } else {
+    var el = hits[hits.length - 1];
+    var ed = new Date(el.t || Date.now());
+    var eh = ('0' + ed.getHours()).slice(-2) + ':' + ('0' + ed.getMinutes()).slice(-2);
+    var who = [];
+    if (el.source) who.push(platformName(el.source));
+    if (el.quality) who.push(qualityName(el.quality));
+    /* 脚本名放句末括号里：窄面板折行时先断在它前面，不会把版本号切成两半 */
+    wrapInto(out,
+      'QQ 加密格式：已拒收 ' + hits.length + ' 次 ｜ 最近 ' + eh + ' ' +
+      (who.length ? who.join(' ') + ' ' : '') + (el.where || '取链') +
+      ' 返回 ' + el.ext + '（已跳过换档' + (el.script ? ' · ' + el.script : '') + '）',
+      width, FONT_BASE, 'text');
+  }
+
   out.push({ t: '', c: 'text' });
 
   if (lastProblem) {
