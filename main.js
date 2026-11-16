@@ -1935,6 +1935,21 @@ function nowInfoRead() {
   return out;
 }
 
+/* 流播 handle 的曲目信息：查 lxPublishNow 维护的广播落盘表（info.json 的
+   items，键是小写路径）。流播项的 %artist% 恒为空，右列表的歌手/歌名
+   全靠这张表补；查不到返回 null，调用方退回 TitleFormat。
+   （此前这个函数被调用但从未定义，try/catch 把 ReferenceError 吞掉后
+   静默走了纯 TitleFormat 兜底 —— 流播行的广播补信息整条链路失效。） */
+function lxInfoOf(h) {
+  var p = '';
+  try { p = String(h && h.Path || ''); } catch (e0) { p = ''; }
+  if (!p) return null;
+  var db = null;
+  try { db = nowInfoRead(); } catch (e1) { db = null; }
+  if (!db || !db.items) return null;
+  return db.items[p.toLowerCase()] || null;
+}
+
 /* 固定投放一份给皮肤读：<profile>\Lxbox\nowplaying\info.json
    皮肤不知道缓存目录被改到哪儿去，所以这份不跟着 lx.cacheDir 走。 */
 function lxInfoSharedFile() {
@@ -14231,6 +14246,10 @@ function on_mouse_move(x, y, mask) {
 
 function on_mouse_leave() {
   if (colDrag) endColDrag();
+  /* 进度 / 音量拖动中指针出了面板：某些宿主 lbtn_up 可能收不到，
+     这里一并复位，防止拖动状态卡死（后续 mouse_move 会一直改进度/音量） */
+  if (headSeekDrag) { var rSD = headSeekDrag; headSeekDrag = null; repaintHead(rSD); }
+  if (headVolDrag) headVolDrag = null;
   if (colHotEdge) {
     colHotEdge = '';
     try { window.SetCursor(32512); } catch (eCL) { }
